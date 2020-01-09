@@ -21,7 +21,6 @@
 #include "log.h"
 #include "device.h"
 #include APP_CONFIG
-#include "wallet.h"
 #include "extensions.h"
 
 #include "device.h"
@@ -1620,8 +1619,20 @@ void ctap_response_init(CTAP_RESPONSE * resp)
     resp->data_size = CTAP_RESPONSE_BUFFER_SIZE;
 }
 
+#define USB_DATA_MAX_LEN 7609U
 
-uint8_t ctap_request(uint8_t * pkt_raw, int length, CTAP_RESPONSE * resp)
+/**
+ * The USB packet that contains a pointer to the packet data, the length, the
+ * command identifier and the channel id.
+ */
+typedef struct {
+    uint8_t data_addr[USB_DATA_MAX_LEN];
+    size_t len;
+    uint8_t cmd;
+    uint32_t cid;
+} Packet;
+
+uint8_t ctap_request(const uint8_t* pkt_raw, int length, uint8_t* out_data, size_t* out_len)
 {
     CborEncoder encoder;
     memset(&encoder,0,sizeof(CborEncoder));
@@ -1630,9 +1641,9 @@ uint8_t ctap_request(uint8_t * pkt_raw, int length, CTAP_RESPONSE * resp)
     pkt_raw++;
     length--;
 
-    uint8_t * buf = resp->data;
+    uint8_t * buf = out_data;
 
-    cbor_encoder_init(&encoder, buf, resp->data_size, 0);
+    cbor_encoder_init(&encoder, buf, USB_DATA_MAX_LEN, 0);
 
     printf1(TAG_CTAP,"cbor input structure: %d bytes\n", length);
     printf1(TAG_DUMP,"cbor req: "); dump_hex1(TAG_DUMP, pkt_raw, length);
@@ -1662,8 +1673,8 @@ uint8_t ctap_request(uint8_t * pkt_raw, int length, CTAP_RESPONSE * resp)
             status = ctap_make_credential(&encoder, pkt_raw, length);
             printf1(TAG_TIME,"make_credential time: %d ms\n", timestamp());
 
-            resp->length = cbor_encoder_get_buffer_size(&encoder, buf);
-            dump_hex1(TAG_DUMP, buf, resp->length);
+            *out_len = cbor_encoder_get_buffer_size(&encoder, buf);
+            dump_hex1(TAG_DUMP, buf, *out_len);
 
             break;
         case CTAP_GET_ASSERTION:
@@ -1672,10 +1683,10 @@ uint8_t ctap_request(uint8_t * pkt_raw, int length, CTAP_RESPONSE * resp)
             status = ctap_get_assertion(&encoder, pkt_raw, length);
             printf1(TAG_TIME,"get_assertion time: %d ms\n", timestamp());
 
-            resp->length = cbor_encoder_get_buffer_size(&encoder, buf);
+            *out_len = cbor_encoder_get_buffer_size(&encoder, buf);
 
-            printf1(TAG_DUMP,"cbor [%d]: \n",  resp->length);
-                dump_hex1(TAG_DUMP,buf, resp->length);
+            printf1(TAG_DUMP,"cbor [%d]: \n",  *out_len);
+                dump_hex1(TAG_DUMP,buf, *out_len);
             break;
         case CTAP_CANCEL:
             printf1(TAG_CTAP,"CTAP_CANCEL\n");
@@ -1684,17 +1695,17 @@ uint8_t ctap_request(uint8_t * pkt_raw, int length, CTAP_RESPONSE * resp)
             printf1(TAG_CTAP,"CTAP_GET_INFO\n");
             status = ctap_get_info(&encoder);
 
-            resp->length = cbor_encoder_get_buffer_size(&encoder, buf);
+            *out_len = cbor_encoder_get_buffer_size(&encoder, buf);
 
-            dump_hex1(TAG_DUMP, buf, resp->length);
+            dump_hex1(TAG_DUMP, buf, *out_len);
 
             break;
         case CTAP_CLIENT_PIN:
             printf1(TAG_CTAP,"CTAP_CLIENT_PIN\n");
             status = ctap_client_pin(&encoder, pkt_raw, length);
 
-            resp->length = cbor_encoder_get_buffer_size(&encoder, buf);
-            dump_hex1(TAG_DUMP, buf, resp->length);
+            *out_len = cbor_encoder_get_buffer_size(&encoder, buf);
+            dump_hex1(TAG_DUMP, buf, *out_len);
             break;
         case CTAP_RESET:
             printf1(TAG_CTAP,"CTAP_RESET\n");
@@ -1709,8 +1720,8 @@ uint8_t ctap_request(uint8_t * pkt_raw, int length, CTAP_RESPONSE * resp)
             if (getAssertionState.lastcmd == CTAP_GET_ASSERTION)
             {
                 status = ctap_get_next_assertion(&encoder);
-                resp->length = cbor_encoder_get_buffer_size(&encoder, buf);
-                dump_hex1(TAG_DUMP, buf, resp->length);
+                *out_len = cbor_encoder_get_buffer_size(&encoder, buf);
+                dump_hex1(TAG_DUMP, buf, *out_len);
                 if (status == 0)
                 {
                     cmd = CTAP_GET_ASSERTION;       // allow for next assertion
@@ -1733,10 +1744,10 @@ done:
 
     if (status != CTAP1_ERR_SUCCESS)
     {
-        resp->length = 0;
+        *out_len = 0;
     }
 
-    printf1(TAG_CTAP,"cbor output structure: %d bytes.  Return 0x%02x\n", resp->length, status);
+    printf1(TAG_CTAP,"cbor output structure: %d bytes.  Return 0x%02x\n", *out_len, status);
 
     return status;
 }

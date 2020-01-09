@@ -9,24 +9,24 @@
 
 #include <stddef.h>
 
-void crypto_sha256_init();
+void crypto_sha256_init(void);
 void crypto_sha256_update(uint8_t * data, size_t len);
-void crypto_sha256_update_secret();
+void crypto_sha256_update_secret(void);
 void crypto_sha256_final(uint8_t * hash);
 
 void crypto_sha256_hmac_init(uint8_t * key, uint32_t klen, uint8_t * hmac);
 void crypto_sha256_hmac_final(uint8_t * key, uint32_t klen, uint8_t * hmac);
 
-void crypto_sha512_init();
+void crypto_sha512_init(void);
 void crypto_sha512_update(const uint8_t * data, size_t len);
 void crypto_sha512_final(uint8_t * hash);
 
-void crypto_ecc256_init();
+void crypto_ecc256_init(void);
 void crypto_ecc256_derive_public_key(uint8_t * data, int len, uint8_t * x, uint8_t * y);
 void crypto_ecc256_compute_public_key(uint8_t * privkey, uint8_t * pubkey);
 
 void crypto_ecc256_load_key(uint8_t * data, int len, uint8_t * data2, int len2);
-void crypto_ecc256_load_attestation_key();
+void crypto_ecc256_load_attestation_key(void);
 void crypto_load_external_key(uint8_t * key, int len);
 void crypto_ecc256_sign(uint8_t * data, int len, uint8_t * sig);
 void crypto_ecdsa_sign(uint8_t * data, int len, uint8_t * sig, int MBEDTLS_ECP_ID);
@@ -47,7 +47,7 @@ void crypto_aes256_reset_iv(uint8_t * nonce);
 void crypto_aes256_decrypt(uint8_t * buf, int lenth);
 void crypto_aes256_encrypt(uint8_t * buf, int lenth);
 
-void crypto_reset_master_secret();
+void crypto_reset_master_secret(void);
 void crypto_load_master_secret(uint8_t * key);
 
 

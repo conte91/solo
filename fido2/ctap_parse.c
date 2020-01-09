@@ -705,7 +705,7 @@ uint8_t ctap_parse_extensions(CborValue * val, CTAP_extensions * ext)
     return 0;
 }
 
-uint8_t ctap_parse_make_credential(CTAP_makeCredential * MC, CborEncoder * encoder, uint8_t * request, int length)
+uint8_t ctap_parse_make_credential(CTAP_makeCredential * MC, CborEncoder * encoder, const uint8_t* request, int length)
 {
     int ret;
     unsigned int i;
