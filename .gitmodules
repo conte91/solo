@@ -12,4 +12,4 @@
     url = https://github.com/solokeys/dfuse-tool
 [submodule "crypto/cifra"]
 	path = crypto/cifra
-	url = https://github.com/solokeys/cifra.git
+	url = git@github.com:Conte91/cifra.git
